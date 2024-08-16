@@ -1,120 +1,152 @@
 'use client';
 import { useUser } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
-import { collection, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, writeBatch } from 'firebase/firestore';
 import {
   Container,
-  Card,
-  CardContent,
   Typography,
-  Grid,
   Button,
-  CardActionArea,
   Box,
   TextField,
   Modal,
+  CircularProgress,
+  IconButton,
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import db from '../../firebase';
 import { useRouter } from 'next/navigation';
 
 export default function Generate() {
   const { isLoaded, isSignedIn, user } = useUser();
   const [flashcards, setFlashcards] = useState([]);
-  const [flipped, setFlipped] = useState({});
   const [text, setText] = useState('');
   const [name, setName] = useState('');
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async () => {
-    if (!user) return;
+    if (!text) return;
 
-    fetch('/api/generate', {
-      method: 'POST',
-      body: text,
-    })
-      .then((res) => res.json())
-      .then((data) => setFlashcards(data));
-  };
-
-  const handleCardClick = (id) => {
-    setFlipped((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    setLoading(true);
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+      const data = await response.json();
+      setFlashcards(data);
+    } catch (error) {
+      console.error('Error generating flashcards:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const saveFlashcards = async () => {
-    if (!user){
-        alert('Please enter a name for the flashcard collection')
-        return
-    } 
+    if (!user) return;
 
-    
-    
-    const userdocRef = doc(collection(db, 'users'), user.id);
-    const docSnap = await getDoc(userdocRef);
-  
+    if (!name) {
+      alert('Please enter a name for the flashcard collection');
+      return;
+    }
+
+    const userDocRef = doc(collection(db, 'users'), user.id);
+    const docSnap = await getDoc(userDocRef);
+
     const newCollection = {
       name,
-      flashcardCount: flashcards.length,  // Optionally store the number of flashcards
+      flashcardCount: flashcards.length,
     };
-  
-    // Initialize Firestore batch
+
     const batch = writeBatch(db);
-  
+
     if (docSnap.exists()) {
-      // Check if a collection with the same name already exists
-      if (docSnap.data().flashcards && docSnap.data().flashcards.find((f) => f.name === name)) {
+      const existingCollections = docSnap.data().flashcards || [];
+      if (existingCollections.find((f) => f.name === name)) {
         alert('Flashcard collection with the same name already exists');
         return;
       } else {
-        // Add the new collection name to the flashcards list in the user's document
-        const collections = docSnap.data().flashcards || [];
-        collections.push(newCollection);
-        batch.set(docRef, { flashcards: collections }, { merge: true });
-  
-        // Create a new collection under the user's document with the flashcards
-        const colRef = collection(docRef, name);
+        existingCollections.push(newCollection);
+        batch.set(userDocRef, { flashcards: existingCollections }, { merge: true });
+
+        const colRef = collection(userDocRef, name);
         flashcards.forEach((flashcard) => {
           const newDocRef = doc(colRef);
           batch.set(newDocRef, flashcard);
         });
       }
     } else {
-      // If the user document doesn't exist, create it with the first flashcard collection
-      batch.set(docRef, { flashcards: [newCollection] });
-  
-      // Create the new flashcard collection
-      const colRef = collection(docRef, name);
+      batch.set(userDocRef, { flashcards: [newCollection] });
+
+      const colRef = collection(userDocRef, name);
       flashcards.forEach((flashcard) => {
         const newDocRef = doc(colRef);
         batch.set(newDocRef, flashcard);
       });
     }
-  
-    // Commit the batch
+
     await batch.commit();
     router.push('/flashcards');
   };
-  
 
   return (
     <Container>
-      <Box sx={{ mt: 4 }}>
+      <Box sx={{ mt: 4, position: 'relative' }}>
+        <IconButton
+          onClick={() => router.back()}
+          sx={{
+            position: 'left',
+            left: -160,
+            top: -20,
+            backgroundColor: '#9a95c9',
+            color: '#fff',
+            '&:hover': {
+              backgroundColor: '#7a7bbf',
+            },
+            margin: 1,
+          }}
+        >
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography variant="h4" gutterBottom>
+          Generate Flashcards
+        </Typography>
         <TextField
           value={text}
           onChange={(e) => setText(e.target.value)}
-          label="Enter text"
+          label="Enter text to generate flashcards"
           fullWidth
           multiline
-          sx={{input: {color:'white'}}}
+          minRows={4}
+          sx={{ mb: 2, '& input': { color: 'black' } }}
         />
-        <Button variant="contained" color="primary" sx={{ mt: 2 }} onClick={()=>handleSubmit(flashcards.name)}>
-          Submit
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ mr: 2, backgroundColor: '#9a95c9', '&:hover': { backgroundColor: '#7a7bbf' } }}
+          onClick={handleSubmit}
+        >
+          {loading ? <CircularProgress size={24} /> : 'Generate'}
         </Button>
-        <Button variant="outlined" color="secondary" sx={{ mt: 2, ml: 2 }} onClick={() => setOpen(true)}>
-          Add to Firebase
+        <Button
+          variant="outlined"
+          color="secondary"
+          sx={{ ml: 2 }}
+          onClick={() => setOpen(true)}
+        >
+          Save to Firebase
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          sx={{ ml: 2 }}
+          onClick={() => router.push('/flashcards')}
+        >
+          View Flashcards
         </Button>
       </Box>
 
@@ -127,7 +159,7 @@ export default function Generate() {
             transform: 'translate(-50%, -50%)',
             width: 400,
             bgcolor: 'background.paper',
-            borderRadius: '8px',
+            borderRadius: 2,
             boxShadow: 24,
             p: 4,
           }}
@@ -145,7 +177,7 @@ export default function Generate() {
           <Button
             variant="contained"
             color="primary"
-            sx={{ mt: 2 }}
+            sx={{ mt: 2, backgroundColor: '#9a95c9', '&:hover': { backgroundColor: '#7a7bbf' } }}
             onClick={() => {
               saveFlashcards();
               setOpen(false);
