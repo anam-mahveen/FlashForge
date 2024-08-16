@@ -8,9 +8,11 @@ import {
   Button,
   Box,
   TextField,
-  Modal,
   CircularProgress,
   IconButton,
+  Card,
+  CardContent,
+  Grid
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import db from '../../firebase';
@@ -20,8 +22,6 @@ export default function Generate() {
   const { isLoaded, isSignedIn, user } = useUser();
   const [flashcards, setFlashcards] = useState([]);
   const [text, setText] = useState('');
-  const [name, setName] = useState('');
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -39,6 +39,7 @@ export default function Generate() {
       });
       const data = await response.json();
       setFlashcards(data);
+      await saveFlashcards(data);
     } catch (error) {
       console.error('Error generating flashcards:', error);
     } finally {
@@ -46,43 +47,38 @@ export default function Generate() {
     }
   };
 
-  const saveFlashcards = async () => {
+  const saveFlashcards = async (flashcards) => {
     if (!user) return;
-
-    if (!name) {
-      alert('Please enter a name for the flashcard collection');
-      return;
-    }
 
     const userDocRef = doc(collection(db, 'users'), user.id);
     const docSnap = await getDoc(userDocRef);
-
-    const newCollection = {
-      name,
-      flashcardCount: flashcards.length,
-    };
 
     const batch = writeBatch(db);
 
     if (docSnap.exists()) {
       const existingCollections = docSnap.data().flashcards || [];
-      if (existingCollections.find((f) => f.name === name)) {
-        alert('Flashcard collection with the same name already exists');
-        return;
-      } else {
-        existingCollections.push(newCollection);
-        batch.set(userDocRef, { flashcards: existingCollections }, { merge: true });
+      const newCollection = {
+        name: `Flashcards ${new Date().toLocaleDateString()}`,
+        flashcardCount: flashcards.length,
+      };
 
-        const colRef = collection(userDocRef, name);
-        flashcards.forEach((flashcard) => {
-          const newDocRef = doc(colRef);
-          batch.set(newDocRef, flashcard);
-        });
-      }
+      existingCollections.push(newCollection);
+      batch.set(userDocRef, { flashcards: existingCollections }, { merge: true });
+
+      const colRef = collection(userDocRef, newCollection.name);
+      flashcards.forEach((flashcard) => {
+        const newDocRef = doc(colRef);
+        batch.set(newDocRef, flashcard);
+      });
     } else {
+      const newCollection = {
+        name: `Flashcards ${new Date().toLocaleDateString()}`,
+        flashcardCount: flashcards.length,
+      };
+
       batch.set(userDocRef, { flashcards: [newCollection] });
 
-      const colRef = collection(userDocRef, name);
+      const colRef = collection(userDocRef, newCollection.name);
       flashcards.forEach((flashcard) => {
         const newDocRef = doc(colRef);
         batch.set(newDocRef, flashcard);
@@ -90,24 +86,22 @@ export default function Generate() {
     }
 
     await batch.commit();
-    router.push('/flashcards');
   };
 
   return (
     <Container>
-      <Box sx={{ mt: 4, position: 'relative' }}>
+      <Box sx={{ mt: 4, position: 'relative', textAlign: 'center' }}>
         <IconButton
           onClick={() => router.back()}
           sx={{
             position: 'left',
-            left: -160,
-            top: -20,
+            left: -710,
+            top: -10,
             backgroundColor: '#9a95c9',
             color: '#fff',
             '&:hover': {
               backgroundColor: '#7a7bbf',
             },
-            margin: 1,
           }}
         >
           <ArrowBackIcon />
@@ -127,66 +121,35 @@ export default function Generate() {
         <Button
           variant="contained"
           color="primary"
-          sx={{ mr: 2, backgroundColor: '#9a95c9', '&:hover': { backgroundColor: '#7a7bbf' } }}
+          sx={{ backgroundColor: '#9a95c9', '&:hover': { backgroundColor: '#7a7bbf' } }}
           onClick={handleSubmit}
         >
           {loading ? <CircularProgress size={24} /> : 'Generate'}
         </Button>
-        <Button
-          variant="outlined"
-          color="secondary"
-          sx={{ ml: 2 }}
-          onClick={() => setOpen(true)}
-        >
-          Save to Firebase
-        </Button>
-        <Button
-          variant="outlined"
-          color="secondary"
-          sx={{ ml: 2 }}
-          onClick={() => router.push('/flashcards')}
-        >
-          View Flashcards
-        </Button>
       </Box>
 
-      <Modal open={open} onClose={() => setOpen(false)}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 400,
-            bgcolor: 'background.paper',
-            borderRadius: 2,
-            boxShadow: 24,
-            p: 4,
-          }}
-        >
-          <Typography variant="h6" component="h2">
-            Save Flashcards
+      {flashcards.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Flashcards
           </Typography>
-          <TextField
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            label="Collection Name"
-            fullWidth
-            sx={{ mt: 2 }}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            sx={{ mt: 2, backgroundColor: '#9a95c9', '&:hover': { backgroundColor: '#7a7bbf' } }}
-            onClick={() => {
-              saveFlashcards();
-              setOpen(false);
-            }}
-          >
-            Save to Firebase
-          </Button>
+          <Grid container spacing={2}>
+            {flashcards.map((flashcard, index) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+                <Card sx={{ minWidth: 275, mb: 2 }}>
+                  <CardContent>
+                    <Typography variant="h6">{flashcard.question}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {flashcard.answer}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         </Box>
-      </Modal>
+      )}
     </Container>
   );
 }
+
