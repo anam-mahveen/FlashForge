@@ -19,7 +19,7 @@ const db = getFirestore(app);
 
 let analytics;
 if (typeof window !== 'undefined') {
-  // Check if Analytics is supported in the current environment
+  
   isSupported().then((supported) => {
     if (supported) {
       analytics = getAnalytics(app);
