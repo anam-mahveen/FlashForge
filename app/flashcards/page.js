@@ -1,58 +1,127 @@
 'use client';
-
 import { useUser } from '@clerk/nextjs';
-import { useEffect, useState } from 'react';
-import { collection, doc, getDoc, setDoc } from 'firebase/firestore';
-import { Card, CardContent, Typography, Grid, CardActionArea, Container } from '@mui/material';
-//import { useRouter } from 'next/navigation';
-import db from '../../firebase';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation'; 
+import { Button, Container, Typography, Box, IconButton } from '@mui/material';
+import { Home } from '@mui/icons-material'; 
 
 export default function FlashcardPage() {
   const { isLoaded, isSignedIn, user } = useUser();
-  const [flashcards, setFlashcards] = useState([]);
   const router = useRouter();
 
   useEffect(() => {
-    async function getFlashcard() {
-      if (!user) return
-      const docRef = doc(collection(db, 'users'), user.id)
-      const docSnap = await getDoc(docRef)
-      
-      if (docSnap.exists()) {
-        const collections = docSnap.data().flashcards || []
-        setFlashcards(collections)
-      } else {
-        await setDoc(docRef, { flashcards: [] })
-      }
+    if (!isLoaded) return;
+
+    if (!isSignedIn) {
+      router.push('/sign-in'); 
     }
-    getFlashcard()
-  }, [user])
+  }, [isLoaded, isSignedIn, router]);
 
   if (!isLoaded || !isSignedIn) {
-    return null;
+    return <div>Loading...</div>; 
   }
 
-  const handleCardClick = (id) => {
-    router.push(`/flashcard?id=${id}`)
+  const handleGenerateClick = () => {
+    router.push('/generate');
+  };
+
+  const handleCreateClick = () => {
+    router.push('/create');
+  };
+
+  const handleFlashcardsClick = () => {
+    router.push('/flashcards');
   };
 
   return (
-    <Container maxWidth="md">
-      <Grid container spacing={3} sx={{ mt: 4 }}>
-        {flashcards.map((flashcard, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <Card>
-              <CardActionArea onClick={() => handleCardClick(flashcard)}>
-                <CardContent>
-                  <Typography variant="h5" component="div">
-                    {flashcard}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+    <Container maxWidth="sm">
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          textAlign: 'center',
+          gap: 3,
+          position: 'relative' 
+        }}
+      >
+        <IconButton
+          href='/flashcard'
+          onClick={handleFlashcardsClick}
+          sx={{
+            position: 'right',
+            top: -200,
+            right: -700,
+            backgroundColor: '#9a95c9',
+            color: '#fff',
+            '&:hover': {
+              backgroundColor: '#7a7bbf',
+            },
+          }}
+        >
+          <Home />
+        </IconButton>
+        <Typography variant="h4" component="div" gutterBottom>
+          Welcome, {user.firstName}!
+        </Typography>
+        <Typography variant="h6" component="div" gutterBottom>
+          What would you like to do?
+        </Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2
+          }}
+        >
+          <Button
+            variant="contained"
+            onClick={handleGenerateClick}
+            size="large"
+            sx={{
+              width: 250,
+              height: 100,
+              borderRadius: 2, 
+              backgroundImage: 'linear-gradient(to right, #9a95c9, #ccc)', 
+              color: '#fff',
+              boxShadow: '0px 4px 10px rgba(0,0,0,0.2)', 
+              '&:hover': {
+                backgroundImage: 'linear-gradient(to right, #7a7bbf, #bfbfdd)', 
+                boxShadow: '0px 6px 15px rgba(0,0,0,0.3)', 
+                transform: 'translateY(-4px)', 
+              }
+            }}
+          >
+            Generate Flashcards
+          </Button>
+          <Typography variant="h6" component="div">
+            OR
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={handleCreateClick}
+            size="large"
+            sx={{
+              width: 250,
+              height: 100,
+              borderRadius: 2, 
+              backgroundImage: 'linear-gradient(to right, #9a95c9, #ccc)', 
+              color: '#fff',
+              boxShadow: '0px 4px 10px rgba(0,0,0,0.2)', 
+              '&:hover': {
+                backgroundImage: 'linear-gradient(to right, #7a7bbf, #bfbfdd)', 
+                boxShadow: '0px 6px 15px rgba(0,0,0,0.3)', 
+                transform: 'translateY(-4px)', 
+              }
+            }}
+          >
+            Create Flashcards
+          </Button>
+        </Box>
+      </Box>
     </Container>
-  )
+  );
 }
