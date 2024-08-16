@@ -1,5 +1,4 @@
-"use client";
-
+'use client';
 import React, { useState, useEffect } from 'react';
 import { Container, Typography, Button, Box, Grid, AppBar, Toolbar, Switch, Paper } from '@mui/material';
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
@@ -73,13 +72,13 @@ export default function Home() {
 
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h2" component="h1" gutterBottom>
-          Prompt, Create, Learn.
+            Prompt, Create, Learn.
           </Typography>
           <Typography variant="h5" component="p" color="textSecondary" gutterBottom>
-          Flash Your Knowledge: Instant Cards from Any Prompt!
+            Flash Your Knowledge: Instant Cards from Any Prompt!
           </Typography>
           <Box sx={{ mt: 4 }}>
-            <Button href='#' variant="contained" color="primary" size="large" sx={{ mx: 1 }}>
+            <Button href='/flashcards' variant="contained" color="primary" size="large" sx={{ mx: 1 }}>
               Get Started
             </Button>
             <Button variant="outlined" color="primary" size="large" sx={{ mx: 1 }}>
@@ -101,8 +100,8 @@ export default function Home() {
                   p: 3,
                   borderRadius: 2,
                   background: isDarkMode
-                    ? 'linear-gradient(to bottom, #333, #222)'
-                    : 'linear-gradient(to bottom, #ddd, #ccc)',
+                    ? 'linear-gradient(to bottom, #222, #636b69)'
+                    : 'linear-gradient(to bottom, #9a95c9, #ccc)',
                   transition: 'transform 0.3s ease, box-shadow 0.3s ease',
                   '&:hover': {
                     transform: 'scale(1.05)',
@@ -112,7 +111,7 @@ export default function Home() {
               >
                 <Box textAlign="center">
                   <Typography variant="h6" gutterBottom>
-                    Easy to Use
+                    Instant Flashcard Creation
                   </Typography>
                   <Typography color="textSecondary">
                     Simply input your text, and our tool will automatically generate flashcards for you.
@@ -127,8 +126,8 @@ export default function Home() {
                   p: 3,
                   borderRadius: 2,
                   background: isDarkMode
-                    ? 'linear-gradient(to bottom, #333, #222)'
-                    : 'linear-gradient(to bottom, #ddd, #ccc)',
+                    ? 'linear-gradient(to bottom, #222, #636b69)'
+                    : 'linear-gradient(to bottom, #9a95c9, #ccc)',
                   transition: 'transform 0.3s ease, box-shadow 0.3s ease',
                   '&:hover': {
                     transform: 'scale(1.05)',
@@ -153,8 +152,8 @@ export default function Home() {
                   p: 3,
                   borderRadius: 2,
                   background: isDarkMode
-                    ? 'linear-gradient(to bottom, #333, #222)'
-                    : 'linear-gradient(to bottom, #ddd, #ccc)',
+                    ? 'linear-gradient(to bottom, #222, #636b69)'
+                    : 'linear-gradient(to bottom, #9a95c9, #ccc)',
                   transition: 'transform 0.3s ease, box-shadow 0.3s ease',
                   '&:hover': {
                     transform: 'scale(1.05)',
