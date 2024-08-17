@@ -19,7 +19,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import db from '../../firebase';
 import { useRouter } from 'next/navigation';
-import './create.css'; // Import standard CSS file
+import './create.css'; 
 
 export default function Create() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -81,7 +81,7 @@ export default function Create() {
       batch.set(userDocRef, { flashcards: [newCollection] });
     }
 
-    const colRef = collection(db, newCollection.name); // Fix to correct Firestore reference
+    const colRef = collection(db, newCollection.name); 
     flashcards.forEach((flashcard) => {
       const newDocRef = doc(colRef);
       batch.set(newDocRef, flashcard);
