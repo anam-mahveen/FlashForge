@@ -50,40 +50,26 @@ export default function Generate() {
   const saveFlashcards = async (flashcards) => {
     if (!user) return;
 
-    const userDocRef = doc(collection(db, 'users'), user.id);
-    const docSnap = await getDoc(userDocRef);
-
+    const userDocRef = doc(db, 'users', user.id);
     const batch = writeBatch(db);
 
-    if (docSnap.exists()) {
-      const existingCollections = docSnap.data().flashcards || [];
-      const newCollection = {
-        name: `Flashcards ${new Date().toLocaleDateString()}`,
-        flashcardCount: flashcards.length,
-      };
+    const setName = `Flashcards ${new Date().toLocaleDateString()}`;
+    const flashcardSetsRef = collection(userDocRef, 'flashcardSets');
+    const newSetRef = doc(flashcardSetsRef, setName);
 
-      existingCollections.push(newCollection);
-      batch.set(userDocRef, { flashcards: existingCollections }, { merge: true });
+   
+    batch.set(newSetRef, {
+      name: setName,
+      flashcardCount: flashcards.length,
+      createdAt: new Date(),
+    });
 
-      const colRef = collection(userDocRef, newCollection.name);
-      flashcards.forEach((flashcard) => {
-        const newDocRef = doc(colRef);
-        batch.set(newDocRef, flashcard);
-      });
-    } else {
-      const newCollection = {
-        name: `Flashcards ${new Date().toLocaleDateString()}`,
-        flashcardCount: flashcards.length,
-      };
-
-      batch.set(userDocRef, { flashcards: [newCollection] });
-
-      const colRef = collection(userDocRef, newCollection.name);
-      flashcards.forEach((flashcard) => {
-        const newDocRef = doc(colRef);
-        batch.set(newDocRef, flashcard);
-      });
-    }
+    
+    const flashcardsColRef = collection(newSetRef, 'flashcards');
+    flashcards.forEach((flashcard) => {
+      const newDocRef = doc(flashcardsColRef);
+      batch.set(newDocRef, flashcard);
+    });
 
     await batch.commit();
   };
@@ -94,9 +80,9 @@ export default function Generate() {
         <IconButton
           onClick={() => router.back()}
           sx={{
-            position: 'left',
-            left: -710,
-            top: -10,
+            position: 'absolute',
+            left: -145,
+            top: -3,
             backgroundColor: '#9a95c9',
             color: '#fff',
             '&:hover': {
@@ -152,4 +138,3 @@ export default function Generate() {
     </Container>
   );
 }
-
