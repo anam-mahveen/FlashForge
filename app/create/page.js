@@ -1,3 +1,4 @@
+
 'use client';
 import { useUser } from '@clerk/nextjs';
 import { useState } from 'react';
@@ -49,8 +50,8 @@ export default function Create() {
           ...prevFlashcards.slice(currentIndex + 2)
         ]);
       } else {
-        setFlashcards(Array(numberOfCards).fill({ front: '', back: '' })); 
-        setCurrentIndex(0); 
+        setFlashcards(Array(numberOfCards).fill({ front: '', back: '' }));
+        setCurrentIndex(0);
       }
     } catch (error) {
       console.error('Error creating flashcards:', error);
@@ -67,13 +68,13 @@ export default function Create() {
 
     const batch = writeBatch(db);
 
+    const newCollection = {
+      name: `Created Flashcards ${new Date().toLocaleDateString()}`,
+      flashcardCount: flashcards.length,
+    };
+
     if (docSnap.exists()) {
       const existingCollections = docSnap.data().flashcards || [];
-      const newCollection = {
-        name: `Created Flashcards ${new Date().toLocaleDateString()}`,
-        flashcardCount: flashcards.length,
-      };
-
       existingCollections.push(newCollection);
       batch.set(userDocRef, { flashcards: existingCollections }, { merge: true });
 
@@ -83,11 +84,6 @@ export default function Create() {
         batch.set(newDocRef, flashcard);
       });
     } else {
-      const newCollection = {
-        name: `Created Flashcards ${new Date().toLocaleDateString()}`,
-        flashcardCount: flashcards.length,
-      };
-
       batch.set(userDocRef, { flashcards: [newCollection] });
 
       const colRef = collection(userDocRef, newCollection.name);
@@ -125,9 +121,9 @@ export default function Create() {
         <IconButton
           onClick={() => router.back()}
           sx={{
-            position: 'left',
-            left: -710,
-            top: -10,
+            position: 'absolute',
+            left: 0,
+            top: 0,
             backgroundColor: '#9a95c9',
             color: '#fff',
             '&:hover': {
@@ -224,4 +220,3 @@ export default function Create() {
     </Container>
   );
 }
-
