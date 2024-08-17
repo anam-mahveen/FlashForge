@@ -1,8 +1,7 @@
-
 'use client';
 import { useUser } from '@clerk/nextjs';
 import { useState } from 'react';
-import { collection, doc, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
 import {
   Container,
   Typography,
@@ -20,6 +19,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import db from '../../firebase';
 import { useRouter } from 'next/navigation';
+import './create.css'; // Import standard CSS file
 
 export default function Create() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -63,7 +63,7 @@ export default function Create() {
   const saveFlashcards = async (flashcards) => {
     if (!user) return;
 
-    const userDocRef = doc(collection(db, 'users'), user.id);
+    const userDocRef = doc(db, 'users', user.id);
     const docSnap = await getDoc(userDocRef);
 
     const batch = writeBatch(db);
@@ -77,21 +77,15 @@ export default function Create() {
       const existingCollections = docSnap.data().flashcards || [];
       existingCollections.push(newCollection);
       batch.set(userDocRef, { flashcards: existingCollections }, { merge: true });
-
-      const colRef = collection(userDocRef, newCollection.name);
-      flashcards.forEach((flashcard) => {
-        const newDocRef = doc(colRef);
-        batch.set(newDocRef, flashcard);
-      });
     } else {
       batch.set(userDocRef, { flashcards: [newCollection] });
-
-      const colRef = collection(userDocRef, newCollection.name);
-      flashcards.forEach((flashcard) => {
-        const newDocRef = doc(colRef);
-        batch.set(newDocRef, flashcard);
-      });
     }
+
+    const colRef = collection(db, newCollection.name); // Fix to correct Firestore reference
+    flashcards.forEach((flashcard) => {
+      const newDocRef = doc(colRef);
+      batch.set(newDocRef, flashcard);
+    });
 
     await batch.commit();
   };
@@ -122,7 +116,7 @@ export default function Create() {
           onClick={() => router.back()}
           sx={{
             position: 'absolute',
-            left: 0,
+            left: -150,
             top: 0,
             backgroundColor: '#9a95c9',
             color: '#fff',
@@ -193,30 +187,6 @@ export default function Create() {
           {loading ? <CircularProgress size={24} /> : 'Create Flashcards'}
         </Button>
       </Box>
-
-      {flashcards.some(flashcard => flashcard.front || flashcard.back) && (
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Created Flashcards
-          </Typography>
-          <Grid container spacing={2} justifyContent="center">
-            {flashcards.map((flashcard, index) => (
-              (flashcard.front || flashcard.back) && (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-                  <Card sx={{ minWidth: 275, mb: 2 }}>
-                    <CardContent>
-                      <Typography variant="h6">{flashcard.front}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {flashcard.back}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )
-            ))}
-          </Grid>
-        </Box>
-      )}
     </Container>
   );
 }
