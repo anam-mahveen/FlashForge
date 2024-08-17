@@ -15,27 +15,52 @@ export default function Flashcards() {
   useEffect(() => {
     const fetchFlashcards = async () => {
       const user = JSON.parse(localStorage.getItem('user')); 
-      if (!user) {
+
+      if (!user || !user.id) {
+        console.error("No user found or user ID is missing.");
         setLoading(false);
         return;
       }
 
-      const userDocRef = doc(db, 'users', user.id);
-      const userDocSnap = await getDocs(userDocRef);
+      try {
+        
+        const userDocRef = doc(db, 'users', user.id);
 
-      if (userDocSnap.exists()) {
+        
+        const flashcardsSetsColRef = collection(userDocRef, 'Created Flashcards 8');
         const flashcardsData = [];
-        const collections = userDocSnap.data().flashcards || [];
-        for (const collectionData of collections) {
-          const colRef = collection(db, collectionData.name); 
-          const cardSnapshots = await getDocs(colRef);
-          cardSnapshots.forEach((card) => {
-            flashcardsData.push(card.data());
+
+        
+        const flashcardsSetsSnapshot = await getDocs(flashcardsSetsColRef);
+
+        if (flashcardsSetsSnapshot.empty) {
+          console.log("No flashcard sets found.");
+        }
+
+        
+        for (const flashcardSetDoc of flashcardsSetsSnapshot.docs) {
+          const dateCollectionId = flashcardSetDoc.id;
+          const dateCollectionRef = collection(userDocRef, 'Created Flashcards 8', dateCollectionId, '2024');
+          
+          
+          const flashcardsSnapshot = await getDocs(dateCollectionRef);
+
+          if (flashcardsSnapshot.empty) {
+            console.log(`No flashcards found in date collection ${dateCollectionId}.`);
+          }
+
+          
+          flashcardsSnapshot.forEach(doc => {
+            flashcardsData.push(doc.data());
           });
         }
+
         setFlashcards(flashcardsData);
+      } catch (error) {
+        console.error("Error fetching flashcards:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchFlashcards();
@@ -74,20 +99,24 @@ export default function Flashcards() {
         My Flashcards
       </Typography>
       <Grid container spacing={2}>
-        {flashcards.map((flashcard, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <Card className={styles.cardContainer}>
-              <div className={styles.cardInner}>
-                <div className={styles.cardFront}>
-                  <Typography variant="h6">{flashcard.front}</Typography>
+        {flashcards.length > 0 ? (
+          flashcards.map((flashcard, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <Card className={styles.cardContainer}>
+                <div className={styles.cardInner}>
+                  <div className={styles.cardFront}>
+                    <Typography variant="h6">{flashcard.front}</Typography>
+                  </div>
+                  <div className={styles.cardBack}>
+                    <Typography variant="h6">{flashcard.back}</Typography>
+                  </div>
                 </div>
-                <div className={styles.cardBack}>
-                  <Typography variant="h6">{flashcard.back}</Typography>
-                </div>
-              </div>
-            </Card>
-          </Grid>
-        ))}
+              </Card>
+            </Grid>
+          ))
+        ) : (
+          <Typography variant="h6">No flashcards found.</Typography>
+        )}
       </Grid>
     </Container>
   );
