@@ -81,7 +81,7 @@ export default function Home() {
             <Button href='/flashcards' variant="contained" color="primary" size="large" sx={{ mx: 1 }}>
               Get Started
             </Button>
-            <Button variant="outlined" color="primary" size="large" sx={{ mx: 1 }}>
+            <Button href='/pricing' variant="outlined" color="primary" size="large" sx={{ mx: 1 }}>
               Pricing
             </Button>
           </Box>
@@ -137,10 +137,10 @@ export default function Home() {
               >
                 <Box textAlign="center">
                   <Typography variant="h6" gutterBottom>
-                    Customizable
+                    Create Your Own Cards
                   </Typography>
                   <Typography color="textSecondary">
-                    Customize your flashcards with colors, fonts, and layouts that suit your style.
+                    Create flashcards for studying, adding custom questions and answers.
                   </Typography>
                 </Box>
               </Paper>
