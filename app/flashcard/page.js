@@ -1,67 +1,71 @@
+
 'use client';
 import { useUser } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
-import { collection, doc, getDoc, getDocs, setDocs } from 'firebase/firestore';
-import {  Container, Card, CardContent, Typography, Grid, Button, CardActionArea, Box } from '@mui/material';
-
+import { collection, doc, getDocs } from 'firebase/firestore';
+import {
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  Grid
+} from '@mui/material';
 import db from '../../firebase';
-import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
 
-export default function flashcard() {
-  const { isLoaded, isSignedIn, user } = useUser();
+export default function FlashcardsPage() {
+  const { user } = useUser();
   const [flashcards, setFlashcards] = useState([]);
-  const [flipped, setFlipped] = useState({});
-
-  
-  // Get query parameter
-  const searchParams = useSearchParams();
-  const search = searchParams.get('id');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function getFlashcards() {
-      if (!search || !user) return;
-      
-      const colRef = collection(doc(collection(db, 'users'), user.id), search);
-      const docs = await getDocs(colRef);
-      const flashcards = [];
-      docs.forEach((doc) => {
-        flashcards.push(doc.data());
-      });
-      setFlashcards(flashcards);
-    }
-    getFlashcards();
-  }, [search, user]);
+    const fetchFlashcards = async () => {
+      if (!user) return;
+      try {
+        const userDocRef = doc(collection(db, 'users'), user.id);
+        const userDocSnap = await getDocs(collection(userDocRef, 'Created Flashcards'));
+        const flashcardData = [];
+        userDocSnap.forEach((doc) => {
+          flashcardData.push(doc.data());
+        });
+        setFlashcards(flashcardData);
+      } catch (error) {
+        console.error('Error fetching flashcards:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleCardClick = (id) => {
-    setFlipped((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
- 
-
-  if(isLoaded|| isSignedIn) {
-    return null
-  }
+    fetchFlashcards();
+  }, [user]);
 
   return (
-    <Grid container spacing={2} justifyContent="center" alignItems="center">
-      {flashcards.map((flashcard, index) => (
-        <Grid item xs={12} sm={6} md={4} key={index}>
-          <Card
-            onClick={() => handleFlip(index)}
-            style={{ cursor: 'pointer', textAlign: 'center' }}
-          >
-            <CardContent>
-              <Typography variant="h5" component="div">
-                {flipped[index] ? flashcard.back : flashcard.front}
-              </Typography>
-            </CardContent>
-          </Card>
+    <Container>
+      <Typography variant="h4" gutterBottom sx={{ mt: 4 }}>
+        Your Flashcards
+      </Typography>
+
+      {loading ? (
+        <Typography variant="h6">Loading...</Typography>
+      ) : (
+        <Grid container spacing={2} justifyContent="center">
+          {flashcards.length > 0 ? (
+            flashcards.map((flashcard, index) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+                <Card sx={{ minWidth: 275, mb: 2 }}>
+                  <CardContent>
+                    <Typography variant="h6">{flashcard.front}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {flashcard.back}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          ) : (
+            <Typography variant="h6">No flashcards available.</Typography>
+          )}
         </Grid>
-      ))}
-    </Grid>
+      )}
+    </Container>
   );
 }
