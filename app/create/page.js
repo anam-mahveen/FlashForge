@@ -13,13 +13,18 @@ import {
   Card,
   CardContent,
   Grid,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import db from '../../firebase';
 import { useRouter } from 'next/navigation';
-import './create.css'; 
+import './create.css';
 
 export default function Create() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -27,32 +32,41 @@ export default function Create() {
   const [flashcards, setFlashcards] = useState(Array(6).fill({ front: '', back: '' }));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [setName, setSetName] = useState('');
   const router = useRouter();
 
   const handleChange = (index, field, value) => {
-    const newFlashcards = [...flashcards];
-    newFlashcards[index][field] = value;
+    const newFlashcards = flashcards.map((flashcard, i) =>
+      i === index ? { ...flashcard, [field]: value } : flashcard
+    );
     setFlashcards(newFlashcards);
   };
 
   const handleSubmit = async () => {
     if (flashcards.some(flashcard => !flashcard.front || !flashcard.back)) return;
 
+    setOpenDialog(true);
+  };
+
+  const handleSetNameChange = (e) => {
+    setSetName(e.target.value);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  const handleSaveSet = async () => {
+    if (!setName.trim()) return;
+
     setLoading(true);
     try {
-      await saveFlashcards(flashcards);
-      const nextIndex = currentIndex + 1;
-      if (nextIndex < numberOfCards) {
-        setCurrentIndex(nextIndex);
-        setFlashcards(prevFlashcards => [
-          ...prevFlashcards.slice(0, currentIndex + 1),
-          { front: '', back: '' },
-          ...prevFlashcards.slice(currentIndex + 2)
-        ]);
-      } else {
-        setFlashcards(Array(numberOfCards).fill({ front: '', back: '' }));
-        setCurrentIndex(0);
-      }
+      await saveFlashcards(flashcards, setName);
+      setFlashcards(Array(numberOfCards).fill({ front: '', back: '' }));
+      setCurrentIndex(0);
+      setSetName('');
+      setOpenDialog(false);
     } catch (error) {
       console.error('Error creating flashcards:', error);
     } finally {
@@ -60,7 +74,7 @@ export default function Create() {
     }
   };
 
-  const saveFlashcards = async (flashcards) => {
+  const saveFlashcards = async (flashcards, setName) => {
     if (!user) return;
 
     const userDocRef = doc(db, 'users', user.id);
@@ -69,8 +83,9 @@ export default function Create() {
     const batch = writeBatch(db);
 
     const newCollection = {
-      name: `Created Flashcards ${new Date().toLocaleDateString()}`,
+      name: setName,
       flashcardCount: flashcards.length,
+      createdAt: new Date().toISOString(),
     };
 
     if (docSnap.exists()) {
@@ -81,7 +96,7 @@ export default function Create() {
       batch.set(userDocRef, { flashcards: [newCollection] });
     }
 
-    const colRef = collection(db, newCollection.name); 
+    const colRef = collection(db, 'flashcards', user.id, setName);
     flashcards.forEach((flashcard) => {
       const newDocRef = doc(colRef);
       batch.set(newDocRef, flashcard);
@@ -140,43 +155,31 @@ export default function Create() {
           sx={{ mb: 2 }}
         />
 
-        <Card sx={{ maxWidth: 600, mx: 'auto', mb: 4 }}>
-          <CardContent>
-            <Typography variant="h6">{`Flashcard ${currentIndex + 1}`}</Typography>
-            <TextField
-              value={flashcards[currentIndex].front}
-              onChange={(e) => handleChange(currentIndex, 'front', e.target.value)}
-              label="Front"
-              fullWidth
-              sx={{ mb: 1, '& input': { color: 'black' } }}
-            />
-            <TextField
-              value={flashcards[currentIndex].back}
-              onChange={(e) => handleChange(currentIndex, 'back', e.target.value)}
-              label="Back"
-              fullWidth
-              sx={{ mb: 2, '& input': { color: 'black' } }}
-            />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Tooltip title="Previous Flashcard">
-                <IconButton
-                  onClick={handlePrevious}
-                  disabled={currentIndex === 0}
-                >
-                  <ArrowBackIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Next Flashcard">
-                <IconButton
-                  onClick={handleNext}
-                  disabled={currentIndex === flashcards.length - 1}
-                >
-                  <ArrowForwardIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </CardContent>
-        </Card>
+        <Grid container spacing={2} justifyContent="center" sx={{ mt: 6 }}>
+          {flashcards.map((flashcard, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <Card sx={{ maxWidth: 600, mx: 'auto', mb: 2 }}>
+                <CardContent>
+                  <Typography variant="h6">{`Flashcard ${index + 1}`}</Typography>
+                  <TextField
+                    value={flashcard.front}
+                    onChange={(e) => handleChange(index, 'front', e.target.value)}
+                    label="Front"
+                    fullWidth
+                    sx={{ mb: 1, '& input': { color: 'black' } }}
+                  />
+                  <TextField
+                    value={flashcard.back}
+                    onChange={(e) => handleChange(index, 'back', e.target.value)}
+                    label="Back"
+                    fullWidth
+                    sx={{ mb: 2, '& input': { color: 'black' } }}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
 
         <Button
           variant="contained"
@@ -186,6 +189,48 @@ export default function Create() {
         >
           {loading ? <CircularProgress size={24} /> : 'Create Flashcards'}
         </Button>
+
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          PaperProps={{
+            style: {
+              borderRadius: '20px', 
+              width: '500px', 
+              backgroundColor: '#f5f5f5', 
+            },
+          }}
+        >
+          <DialogTitle
+            sx={{ backgroundColor: '#9a95c9', color: '#fff', borderRadius: '20px 20px 0 0' }}
+          >
+            Enter Flashcard Set Name
+          </DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Set Name"
+              type="text"
+              fullWidth
+              variant="standard"
+              value={setName}
+              onChange={handleSetNameChange}
+              InputProps={{ style: { color: 'black' } }}
+              InputLabelProps={{ style: { color: 'black' } }}
+            />
+          </DialogContent>
+          <Divider />
+          <DialogActions>
+            <Button onClick={handleCloseDialog} sx={{ color: '#9a95c9' }}>Cancel</Button>
+            <Button
+              onClick={handleSaveSet}
+              sx={{ backgroundColor: '#9a95c9', color: '#fff', '&:hover': { backgroundColor: '#7a7bbf' } }}
+            >
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );
