@@ -1,7 +1,7 @@
 'use client';
 import { useUser } from '@clerk/nextjs';
 import { useState } from 'react';
-import { collection, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import {
   Container,
   Typography,
@@ -13,7 +13,6 @@ import {
   Card,
   CardContent,
   Grid,
-  Tooltip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -21,8 +20,7 @@ import {
   Divider,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import db from '../../firebase';
+import db from '../../firebase'; 
 import { useRouter } from 'next/navigation';
 import './create.css';
 
@@ -36,6 +34,7 @@ export default function Create() {
   const [setName, setSetName] = useState('');
   const router = useRouter();
 
+  
   const handleChange = (index, field, value) => {
     const newFlashcards = flashcards.map((flashcard, i) =>
       i === index ? { ...flashcard, [field]: value } : flashcard
@@ -43,30 +42,88 @@ export default function Create() {
     setFlashcards(newFlashcards);
   };
 
-  const handleSubmit = async () => {
-    if (flashcards.some(flashcard => !flashcard.front || !flashcard.back)) return;
+  
+  const handleSubmit = () => {
+    if (flashcards.some(flashcard => !flashcard.front || !flashcard.back)) {
+      console.error('Flashcards are incomplete');
+      return;
+    }
 
     setOpenDialog(true);
   };
 
+  
   const handleSetNameChange = (e) => {
     setSetName(e.target.value);
   };
 
+  
   const handleCloseDialog = () => {
     setOpenDialog(false);
   };
 
+  
+  const saveFlashcards = async (flashcards, setName) => {
+    if (!user) {
+      console.error('No user authenticated');
+      return;
+    }
+  
+    try {
+      console.log('User ID:', user.id);
+      console.log('Set Name:', setName);
+      console.log('Flashcards:', flashcards);
+  
+      const userDocRef = doc(db, 'users', user.id);
+      const userFlashcardsRef = collection(userDocRef, 'flashcardSets');
+      const newSetRef = doc(userFlashcardsRef, setName);
+  
+      console.log('Collection Reference:', userFlashcardsRef);
+      console.log('Document Reference:', newSetRef);
+  
+      const batch = writeBatch(db);
+  
+      const newCollection = {
+        name: setName,
+        flashcardCount: flashcards.length,
+        createdAt: new Date().toISOString(),
+      };
+  
+      batch.set(newSetRef, newCollection);
+  
+      flashcards.forEach((flashcard, index) => {
+        const flashcardDocRef = doc(newSetRef, `flashcard_${index + 1}`);
+        batch.set(flashcardDocRef, flashcard);
+      });
+  
+      await batch.commit();
+      console.log('Flashcards saved successfully');
+    } catch (error) {
+      console.error('Error saving flashcards:', error);
+    }
+  };
+  
+
+  
   const handleSaveSet = async () => {
-    if (!setName.trim()) return;
+    if (!setName.trim()) {
+      console.error('Set name is empty');
+      return;
+    }
 
     setLoading(true);
     try {
+      console.log('Saving flashcards:', flashcards, 'Set name:', setName);
+
       await saveFlashcards(flashcards, setName);
+
+      
       setFlashcards(Array(numberOfCards).fill({ front: '', back: '' }));
       setCurrentIndex(0);
       setSetName('');
-      setOpenDialog(false);
+
+      
+      handleCloseDialog();
     } catch (error) {
       console.error('Error creating flashcards:', error);
     } finally {
@@ -74,37 +131,7 @@ export default function Create() {
     }
   };
 
-  const saveFlashcards = async (flashcards, setName) => {
-    if (!user) return;
-
-    const userDocRef = doc(db, 'users', user.id);
-    const docSnap = await getDoc(userDocRef);
-
-    const batch = writeBatch(db);
-
-    const newCollection = {
-      name: setName,
-      flashcardCount: flashcards.length,
-      createdAt: new Date().toISOString(),
-    };
-
-    if (docSnap.exists()) {
-      const existingCollections = docSnap.data().flashcards || [];
-      existingCollections.push(newCollection);
-      batch.set(userDocRef, { flashcards: existingCollections }, { merge: true });
-    } else {
-      batch.set(userDocRef, { flashcards: [newCollection] });
-    }
-
-    const colRef = collection(db, 'flashcards', user.id, setName);
-    flashcards.forEach((flashcard) => {
-      const newDocRef = doc(colRef);
-      batch.set(newDocRef, flashcard);
-    });
-
-    await batch.commit();
-  };
-
+  
   const handleNext = () => {
     if (currentIndex < flashcards.length - 1) {
       setCurrentIndex(currentIndex + 1);
@@ -117,12 +144,23 @@ export default function Create() {
     }
   };
 
+  
   const handleNumberOfCardsChange = (e) => {
     const newCount = Math.max(1, parseInt(e.target.value, 10));
     setNumberOfCards(newCount);
     setFlashcards(Array(newCount).fill({ front: '', back: '' }));
     setCurrentIndex(0);
   };
+
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <Container>
+        <Typography variant="h4" gutterBottom>
+          Please sign in to create flashcards.
+        </Typography>
+      </Container>
+    );
+  }
 
   return (
     <Container>
