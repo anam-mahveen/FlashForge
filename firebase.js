@@ -2,7 +2,6 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
-
 const firebaseConfig = {
   apiKey: "AIzaSyC3UKn9J3YMip4sD36XqSqDVrTgpk-JSSs",
   authDomain: "hsflashcards-cc77e.firebaseapp.com",
@@ -17,9 +16,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Initialize Analytics if supported
 let analytics;
 if (typeof window !== 'undefined') {
-  
   isSupported().then((supported) => {
     if (supported) {
       analytics = getAnalytics(app);
