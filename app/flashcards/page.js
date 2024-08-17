@@ -3,7 +3,7 @@ import { useUser } from '@clerk/nextjs';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation'; 
 import { Button, Container, Typography, Box, IconButton } from '@mui/material';
-import { Home } from '@mui/icons-material'; 
+import { Home, ArrowBack } from '@mui/icons-material'; 
 
 export default function FlashcardPage() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -33,6 +33,10 @@ export default function FlashcardPage() {
     router.push('/flashcards');
   };
 
+  const handleBackClick = () => {
+    router.push('/'); // Navigates to the main page
+  };
+
   return (
     <Container maxWidth="sm">
       <Box
@@ -48,12 +52,27 @@ export default function FlashcardPage() {
         }}
       >
         <IconButton
+          onClick={handleBackClick}
+          sx={{
+            position: 'absolute',
+            top: 20,
+            left: -430,
+            backgroundColor: '#9a95c9',
+            color: '#fff',
+            '&:hover': {
+              backgroundColor: '#7a7bbf',
+            },
+          }}
+        >
+          <ArrowBack />
+        </IconButton>
+        <IconButton
           href='/flashcard'
           onClick={handleFlashcardsClick}
           sx={{
-            position: 'right',
-            top: -200,
-            right: -700,
+            position: 'absolute',
+            top: 20,
+            right: -430,
             backgroundColor: '#9a95c9',
             color: '#fff',
             '&:hover': {
